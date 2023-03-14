@@ -9,6 +9,7 @@ python-dotenv = "*"
 torch = "==1.13.1"
 torchtext = "==0.14.0"
 pandas = "*"
+bs4 = "*"
 
 [dev-packages]
 
