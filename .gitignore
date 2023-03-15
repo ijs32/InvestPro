@@ -1,3 +1,10 @@
+# white space removed
+/data/raw-company-statements
+
+# leaving in white spaces and adding any non nasdaq companies if they have a ticker
+/data/raw-company-statements-v2
+
 /data/filing-history
 
-/data/company-statements_html
+# keep db variables
+.env
