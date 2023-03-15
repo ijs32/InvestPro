@@ -1,6 +1,7 @@
 import os, json, requests, random, pandas as pd
 from bs4 import BeautifulSoup
 import datetime as dt
+import yfinance as yf
 from dateutil.relativedelta import relativedelta
 from MySQLConn.mySQLdb import engine
 from sqlalchemy import text
@@ -109,4 +110,38 @@ def insert_sp500_performance():
 
 
 def insert_tckr_performance():
-    print("wip")
+    query_statements = text("SELECT * FROM company_10k_statements")
+
+    with engine.connect() as conn:
+        result = conn.execute(query_statements)
+
+    # row[0] = statement_id, [1] = file_name, [2] = ticker, [3] = exchange, [4] = report_date, [5] = rounded_report_date, [6] = rounded_eoy_date, [7] = yoy_performance, [8] = predicted_sentiment, [9] = performance_id
+    for row in result.all():
+        try: 
+            start = dt.datetime.combine(row[5], dt.time())
+            end = dt.datetime.combine(row[6], dt.time())
+            
+            print("start: ", start)
+            print("end: ", end)
+            print("statement_id: ", row[0])
+            tckr = yf.Ticker(row[2])
+            # fast access to subset of stock info (opportunistic)
+            result = tckr.history(period="1y", start=start, end=end)
+            start_value = result.iloc[0]["Close"]
+            end_value = result.iloc[-1]["Close"]
+
+            performance = round((((end_value - start_value) / start_value) * 100), 4)
+            print(performance)
+
+            insert = text("UPDATE company_10k_statements SET yoy_performance = :performance WHERE statement_id = :statement_id")
+            params = {"performance": performance, "statement_id": row[0]}
+
+            with engine.connect() as conn:
+                result = conn.execute(insert, params)
+                conn.commit()
+        except Exception as e:
+            print("Error: ", e)
+            continue
+
+
+insert_tckr_performance()

@@ -12,6 +12,8 @@ pandas = "*"
 bs4 = "*"
 sqlalchemy = "*"
 mysql-connector-python = "*"
+iexfinance = "*"
+yfinance = "*"
 
 [dev-packages]
 
