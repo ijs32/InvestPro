@@ -1,4 +1,6 @@
-import os, json, requests, random, pandas as pd
+import os, json, requests, random, re, pandas as pd, nltk
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
 from bs4 import BeautifulSoup
 import datetime as dt
 import yfinance as yf
@@ -166,12 +168,24 @@ def calculate_sentiment_score():
         result = conn.execute(query)
 
     for row in result:
-        sentiment_score = round(((row[1] - row[2]) / 100), 2)
+        percent_above_below_SPY = round(((row[1] - row[2]) / 100), 2)
+        sentiment_score = ((percent_above_below_SPY + 1) / 2)
         statement_id = row[0]
         
-        insert = text("UPDATE company_10k_statements `cs` SET cs.percent_above_below_SPY = :sentiment_score WHERE cs.statement_id = :statement_id")
+        insert = text("""
+            UPDATE company_10k_statements `cs` 
+                SET 
+                cs.percent_above_below_SPY = :percent_above_below_SPY,
+                cs.sentiment_score = :sentiment_score
+            WHERE cs.statement_id = :statement_id
+            """)
         
-        params = {"sentiment_score": sentiment_score, "statement_id": statement_id}
+        params = {
+            "percent_above_below_SPY": percent_above_below_SPY, 
+            "sentiment_score": sentiment_score,
+            "statement_id": statement_id
+        }
+        
         with engine.connect() as conn:
             result = conn.execute(insert, params)
             conn.commit()
@@ -180,4 +194,39 @@ def calculate_sentiment_score():
             else:
                 print("Row inserted successfully")
 
-    
+
+def clean_data():
+    # nltk.download('stopwords')
+    # nltk.download('punkt')
+    file_count = len(os.listdir("./data/raw-company-statements-v2"))
+    filter_count = 0
+
+    with os.scandir("./data/raw-company-statements-v2") as dir:
+        for file in dir:
+            
+            labels = file.name.split("--")
+            query = text("SELECT statement_id FROM company_10k_statements WHERE file_name = :file_name AND ticker = :ticker LIMIT 1")
+            params = {"file_name": labels[-1], "ticker": labels[0]}
+            with engine.connect() as conn:
+                result = conn.execute(query, params)
+            statement_id = result.first()[0]
+            
+            with open(file.path) as f:
+                text = f.read()
+
+                text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
+                text = re.sub(r'\b\w*\d\w*\b', '', text)
+
+                text = re.sub(r'\s{2,}', ' ', text)
+                text = text.lower()
+
+                stop_words = set(stopwords.words('english'))
+                words = word_tokenize(text)
+                filtered_words = [word for word in words if word.lower() not in stop_words]
+                text = ' '.join(filtered_words)
+                with open(f"./data/clean-company-statements/{statement_id}__{labels[0]}", "w") as f:
+                    f.write(text)
+            filter_count += 1
+            print(f"Progress: {filter_count} Files cleaned -- {(filter_count / file_count) * 100}% done.")
+
+clean_data()

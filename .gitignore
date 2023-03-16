@@ -4,6 +4,9 @@
 # leaving in white spaces and adding any non nasdaq companies if they have a ticker
 /data/raw-company-statements-v2
 
+# clean company statements
+/data/clean-company-statements
+
 # giant SEC file
 /data/filing-history
 
