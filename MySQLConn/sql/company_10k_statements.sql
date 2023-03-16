@@ -6,8 +6,10 @@ CREATE TABLE `company_10k_statements` (
   `report_date` DATE NOT NULL,
   `rounded_report_date` DATE NULL,
   `rounded_eoy_date` DATE NULL,
-  `yoy_performance` DECIMAL(8,2) DEFAULT NULL,
-  `predicted_sentiment` DECIMAL(3,2) DEFAULT NULL,
+  `company_performance` DECIMAL(8,2) DEFAULT NULL,
+  `percent_above_below_SPY` DECIMAL(3,2) DEFAULT NULL,
+  `sentiment_score` DECIMAL(3,2) DEFAULT NULL,
+  `sentiment_label` INT(1) DEFAULT NULL,
   `performance_id` BIGINT(20) NOT NULL,
   PRIMARY KEY (`statement_id`)
 )

@@ -4,7 +4,11 @@
 # leaving in white spaces and adding any non nasdaq companies if they have a ticker
 /data/raw-company-statements-v2
 
+# giant SEC file
 /data/filing-history
+
+# giant DB backup file
+/MySQLConn/sql/backup.sql
 
 # keep db variables
 .env
