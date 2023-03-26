@@ -6,9 +6,13 @@
 
 # clean company statements
 /data/clean-company-statements
+/data/clean-company-statements__BU
 
 # giant SEC file
-/data/filing-history
+/data/submissions
+
+# GloVe word embeddings
+/data/GloVe
 
 # giant DB backup file
 /MySQLConn/sql/backup.sql

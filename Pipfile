@@ -15,6 +15,7 @@ mysql-connector-python = "*"
 iexfinance = "*"
 yfinance = "*"
 nltk = "*"
+tensorboard = "*"
 
 [dev-packages]
 

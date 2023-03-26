@@ -1,4 +1,5 @@
-import os, json, requests, random, re, pandas as pd, nltk
+import os, json, requests, random, re, nltk, sys
+import pandas as pd, numpy as np, pickle
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from bs4 import BeautifulSoup
@@ -203,30 +204,94 @@ def clean_data():
 
     with os.scandir("./data/raw-company-statements-v2") as dir:
         for file in dir:
+            try:
+                labels = file.name.split("--")
+                query = text("SELECT statement_id, sentiment_label FROM company_10k_statements WHERE file_name = :file_name AND ticker = :ticker LIMIT 1")
+                params = {"file_name": labels[-1], "ticker": labels[0]}
+                with engine.connect() as conn:
+                    result = conn.execute(query, params)
+                
+                for row in result:
+                    statement_id, sentiment_label = row
+                    print(statement_id)
+                    print(sentiment_label)
+                    
+                    with open(file.path) as f:
+                        document = f.read()
+
+                        document = re.sub(r'[^a-zA-Z0-9\s]', '', document)
+                        document = re.sub(r'\b\w*\d\w*\b', '', document)
+
+                        document = re.sub(r'\s{2,}', ' ', document)
+                        document = document.lower()
+
+                        stop_words = set(stopwords.words('english'))
+                        words = word_tokenize(document)
+                        filtered_words = [word for word in words if word.lower() not in stop_words]
+                        document = ' '.join(filtered_words)
+                        with open(f"./data/clean-company-statements/{sentiment_label}__{statement_id}__{labels[0]}.txt", "w") as f:
+                            f.write(document)
+                    filter_count += 1
+                    print(f"Progress: {filter_count}/{file_count} Files cleaned -- {((filter_count / file_count) * 100):.2f}% done.", end="\r")
+            except Exception as e:
+                if e is KeyboardInterrupt:
+                    sys.exit()
+
+                print("\n")
+                print("Company removed from dataset")
+                os.remove(file.path)
+                continue
+
+def apply_labels():
+    with os.scandir("./data/clean-company-statements__BU") as dir:
+        try:
+            for file in dir:
+                id = file.name.split("__")[0]
+                query = text("SELECT sentiment_label FROM company_10k_statements WHERE statement_id = :statement_id LIMIT 1")
+
+                params = {"statement_id": id}
+                with engine.connect() as conn:
+                    result = conn.execute(query, params)
+                sentiment_label = result.first()[0]
+
+                os.rename(f"./data/clean-company-statements__BU/{file.name}", f"./data/clean-company-statements/{sentiment_label}__{file.name}")
+        except Exception as e:
+            if e is KeyboardInterrupt:
+                sys.exit()
             
-            labels = file.name.split("--")
-            query = text("SELECT statement_id FROM company_10k_statements WHERE file_name = :file_name AND ticker = :ticker LIMIT 1")
-            params = {"file_name": labels[-1], "ticker": labels[0]}
-            with engine.connect() as conn:
-                result = conn.execute(query, params)
-            statement_id = result.first()[0]
-            
-            with open(file.path) as f:
-                text = f.read()
+            print(f"failed")
 
-                text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
-                text = re.sub(r'\b\w*\d\w*\b', '', text)
 
-                text = re.sub(r'\s{2,}', ' ', text)
-                text = text.lower()
+def save_glove():
+    # the following code was taken from:
+    # https://medium.com/mlearning-ai/load-pre-trained-glove-embeddings-in-torch-nn-embedding-layer-in-under-2-minutes-f5af8f57416a
 
-                stop_words = set(stopwords.words('english'))
-                words = word_tokenize(text)
-                filtered_words = [word for word in words if word.lower() not in stop_words]
-                text = ' '.join(filtered_words)
-                with open(f"./data/clean-company-statements/{statement_id}__{labels[0]}", "w") as f:
-                    f.write(text)
-            filter_count += 1
-            print(f"Progress: {filter_count} Files cleaned -- {(filter_count / file_count) * 100}% done.")
+    vocab,embeddings = [],[]
+    with open('./data/GloVe/50d/glove.6B.50d.txt','rt') as fi:
+        full_content = fi.read().strip().split('\n')
+    for i in range(len(full_content)):
+        i_word = full_content[i].split(' ')[0]
+        i_embeddings = [float(val) for val in full_content[i].split(' ')[1:]]
+        vocab.append(i_word)
+        embeddings.append(i_embeddings)
+    
+    vocab_npa = np.array(vocab)
+    embs_npa = np.array(embeddings)
 
-clean_data()
+    vocab_npa = np.insert(vocab_npa, 0, '<pad>')
+    vocab_npa = np.insert(vocab_npa, 1, '<unk>')
+
+    pad_emb_npa = np.zeros((1,embs_npa.shape[1])) 
+    unk_emb_npa = np.mean(embs_npa,axis=0,keepdims=True)
+    embs_npa = np.vstack((pad_emb_npa,unk_emb_npa,embs_npa))
+
+    print("embeddings: ", embs_npa)
+    print("vocab: ", vocab_npa)
+
+    with open('./data/GloVe/50d/vocab_npa.npy','wb') as f:
+        np.save(f,vocab_npa)
+
+    with open('./data/GloVe/50d/embs_npa.npy','wb') as f:
+        np.save(f,embs_npa)
+
+save_glove()
