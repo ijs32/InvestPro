@@ -25,7 +25,7 @@ def train_one_epoch(train_loader, model, optimizer, loss_fn, device, epoch, epoc
     for i, tdata in enumerate(train_loader):
         text, label = tdata
         text = text.to(device).long()
-        label = torch.tensor(label, dtype=torch.long).to(device).long()
+        label = (torch.tensor(label, dtype=torch.float).to(device)).unsqueeze(1)
 
         optimizer.zero_grad()
         outputs = model(text)
@@ -53,17 +53,17 @@ def validate_one_epoch(valid_loader, model, loss_fn, device):
     for i, vdata in enumerate(valid_loader):
         v_text, v_label = vdata
         v_text = v_text.to(device).long()
-        v_label = torch.tensor(v_label, dtype=torch.long).to(device).long()
+        v_label = (torch.tensor(v_label, dtype=torch.float).to(device)).unsqueeze(1)
 
         v_outputs = model(v_text)
         # v_outputs = F.softmax(v_outputs, dim=1)
-
+        print(v_outputs)
+        print(v_label)
         vloss = loss_fn(v_outputs, v_label)
         running_vloss += vloss
 
-        _, predicted = torch.max(v_outputs, 1)
+        accuracy = (100 - (abs(v_outputs - v_label) * 100))
+        accuracy = sum(accuracy) / len(accuracy)
 
-        # update the number of correct predictions
-        num_correct += (predicted == v_label).sum().item()
-
-    return (running_vloss / len(valid_loader)), num_correct
+        print(f'LOSS valid {vloss:.4f}')
+        print(f'ACCURACY valid {accuracy.item():.4f}')

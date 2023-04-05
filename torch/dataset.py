@@ -1,4 +1,4 @@
-import torch, os, random
+import torch, gzip
 import torchtext as tt
 import torch.nn as nn
 from torch.utils.data import Dataset
@@ -21,9 +21,9 @@ class StatementDataset(Dataset):
     def __getitem__(self, index):
         """Get a single item from the dataset."""
 
-        with open(f"../data/clean-company-statements/{self.data[index]}") as f:
+        with gzip.open(f"../data/training-data/company-statements_gz/{self.data[index]}", "rt") as f:
             text = f.read()
-        label = int(self.data[index].split("__")[0])
+        label = float(self.data[index].split("__")[0])
 
         return text, label
 
@@ -35,7 +35,7 @@ class StatementDataset(Dataset):
 
         def yield_tokens(file_names):
             for file_name in file_names:
-                with open(f"../data/clean-company-statements/{file_name}") as f:
+                with gzip.open(f"../data/training-data/company-statements_gz/{file_name}", "rt") as f:
                     yield toker(f.read())
 
         text_vob = tt.vocab.build_vocab_from_iterator(yield_tokens(
@@ -66,4 +66,4 @@ class StatementDataset(Dataset):
     def get_dataloader(self):
         """Get a dataloader for the dataset."""
         return DataLoader(
-            self, batch_size=16, shuffle=True, collate_fn=self.collate_fn)
+            self, batch_size=4, shuffle=True, collate_fn=self.collate_fn)

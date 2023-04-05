@@ -1,21 +1,13 @@
-# white space removed
-/data/raw-company-statements
-
-# leaving in white spaces and adding any non nasdaq companies if they have a ticker
-/data/raw-company-statements-v2
-
-# clean company statements
-/data/clean-company-statements
-/data/clean-company-statements__BU
-
-# giant SEC file
-/data/submissions
-
-# GloVe word embeddings
-/data/GloVe
+# sorry, the data is too big to upload to github
+data/
 
 # giant DB backup file
 /MySQLConn/sql/backup.sql
 
 # keep db variables
 .env
+
+# model vocab and structure
+/torch/saved_models
+/torch/saved_vocab
+/torch/runs

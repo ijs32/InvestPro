@@ -2,47 +2,37 @@
 import torch
 import torch.nn as nn
 from model import NLPModel
-from dataset import PremierDataset
-import sys
+from dataset import StatementDataset
+import sys, os
 from training_helper import validate_one_epoch
+from random import shuffle
 
 
-def train(premier_val_dataset):
+def test(val_text_dataset):
     """Main function to train the model"""
     DEVICE = torch.device('mps')
 
-    model = NLPModel(len(desc_vob), len(vendor_vob))
+    model = NLPModel(len(val_text_dataset.text_vob))
     model.load_state_dict(torch.load(
-        './saved_models/model_96-percent_20230304.pt'))
+        './saved_models/model_0_20230326.pt'))
     model.eval()
     model.to(DEVICE)
 
-    loss_fn = nn.CrossEntropyLoss()
+    loss_fn = nn.MSELoss()
 
-    valid_loader = premier_val_dataset.get_dataloader()
+    valid_loader = val_text_dataset.get_dataloader()
 
     model.train(False)
-    avg_vloss, num_correct = validate_one_epoch(
-        valid_loader, model, loss_fn, DEVICE)
-
-    val_acc = num_correct / len(premier_val_dataset)
-    print(f'LOSS valid {avg_vloss:.4f}')
-    print(f'ACCURACY valid {val_acc:.4f}')
+    validate_one_epoch(valid_loader, model, loss_fn, DEVICE)
 
 
-if len(sys.argv) < 2:
-    print("Usage: python main.py large | small")
-    sys.exit(1)
-else:
-    file_size = sys.argv[1]
-    print("Using file size: ", file_size)
+with os.scandir("../data/training-data/company-statements") as dir:
+    files = [file.name for file in dir]
+    shuffle(files)
 
-desc_vob = torch.load(f'./saved_vocab/large_desc_vob.pt')
+files = files[:100]
+text_vob = torch.load(f'./saved_vocab/text_vob.pt')
+val_text_dataset = StatementDataset(
+    files, text_vob)
 
-vendor_vob = torch.load(f'./saved_vocab/large_vendor_vob.pt')
-
-test_csv_path = f'../data/{file_size}_premier_test.csv'
-premier_val_dataset = PremierDataset(
-    test_csv_path, desc_vob, vendor_vob)
-
-train(premier_val_dataset)
+test(val_text_dataset)

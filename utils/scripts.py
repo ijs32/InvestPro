@@ -1,5 +1,5 @@
 import os, json, requests, random, re, nltk, sys
-import pandas as pd, numpy as np, pickle
+import pandas as pd, numpy as np, gzip
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from bs4 import BeautifulSoup
@@ -39,7 +39,7 @@ def get_10k(headers):
                                 soup = BeautifulSoup(response.text, features="html.parser")
                                 clean_text = soup.get_text()
 
-                                with open(f"./data/raw-company-statements-v2/{tckr}--{report_date}__{cik}--{acc_number}--{file_name}", "w") as f:
+                                with open(f"../data/raw-data/raw-company-statements-v2/{tckr}--{report_date}__{cik}--{acc_number}--{file_name}", "w") as f:
                                     f.write(clean_text)
                                 print(f"Downloaded {file_name} for {tckr}")
 
@@ -73,7 +73,7 @@ def insert_sp500_performance():
         result = conn.execute(get_10k_reportDates)
 
     report_dates = [row[0] for row in result]
-    df = pd.read_csv("./data/sp500_performance.csv")    
+    df = pd.read_csv("../data/training-data/sp500_performance.csv")    
     for index, row in df.iterrows():
         date = row["Date"].split("-")
         df.at[index, 'Date'] = dt.date(int(date[0]), int(date[1]), int(date[2]))
@@ -199,10 +199,10 @@ def calculate_sentiment_score():
 def clean_data():
     # nltk.download('stopwords')
     # nltk.download('punkt')
-    file_count = len(os.listdir("./data/raw-company-statements-v2"))
+    file_count = len(os.listdir("../data/raw-data/raw-company-statements-v2"))
     filter_count = 0
 
-    with os.scandir("./data/raw-company-statements-v2") as dir:
+    with os.scandir("../data/raw-data/raw-company-statements-v2") as dir:
         for file in dir:
             try:
                 labels = file.name.split("--")
@@ -229,7 +229,7 @@ def clean_data():
                         words = word_tokenize(document)
                         filtered_words = [word for word in words if word.lower() not in stop_words]
                         document = ' '.join(filtered_words)
-                        with open(f"./data/clean-company-statements/{sentiment_label}__{statement_id}__{labels[0]}.txt", "w") as f:
+                        with open(f"../data/training-data/company-statements/{sentiment_label}__{statement_id}__{labels[0]}.txt", "w") as f:
                             f.write(document)
                     filter_count += 1
                     print(f"Progress: {filter_count}/{file_count} Files cleaned -- {((filter_count / file_count) * 100):.2f}% done.", end="\r")
@@ -243,23 +243,23 @@ def clean_data():
                 continue
 
 def apply_labels():
-    with os.scandir("./data/clean-company-statements__BU") as dir:
-        try:
-            for file in dir:
+    with os.scandir("../data/training-data/company-statements") as dir:
+        for file in dir:
+            try:
                 id = file.name.split("__")[0]
-                query = text("SELECT sentiment_label FROM company_10k_statements WHERE statement_id = :statement_id LIMIT 1")
+                query = text("SELECT sentiment_score FROM company_10k_statements WHERE statement_id = :statement_id LIMIT 1")
 
                 params = {"statement_id": id}
                 with engine.connect() as conn:
                     result = conn.execute(query, params)
                 sentiment_label = result.first()[0]
 
-                os.rename(f"./data/clean-company-statements__BU/{file.name}", f"./data/clean-company-statements/{sentiment_label}__{file.name}")
-        except Exception as e:
-            if e is KeyboardInterrupt:
-                sys.exit()
-            
-            print(f"failed")
+                os.rename(f"../data/training-data/company-statements/{file.name}", f"../data/training-data/company-statements/{sentiment_label}__{file.name}")
+            except Exception as e:
+                if e is KeyboardInterrupt:
+                    sys.exit()
+                
+                print(f"failed")
 
 
 def save_glove():
@@ -294,4 +294,29 @@ def save_glove():
     with open('./data/GloVe/50d/embs_npa.npy','wb') as f:
         np.save(f,embs_npa)
 
-save_glove()
+
+def fix_labels():
+        with os.scandir("../data/training-data/company-statements") as dir:
+            for file in dir:
+                try:
+                    file_items = file.name.split("__")
+                    print(file.name)
+
+                    os.rename(f"../data/training-data/company-statements/{file.name}", f"../data/training-data/company-statements/{file_items[1]}__{file_items[2]}")
+                except:
+                    print("whatever")
+
+
+def compress_data():
+    """compress training data to save memory"""
+    with os.scandir("../data/training-data/company-statements") as dir:
+        for file in dir:
+            try:
+                with open(file.path, 'rb') as f_in:
+                    # open the output file and compress the data
+                    with gzip.open(f'../data/training-data/company-statements_gz/{file.name}.gz', 'wb') as f_out:
+                        f_out.writelines(f_in)
+                    print(f"Compressed {file.name} successfully")
+            except Exception as e:
+                print(e)
+                continue
