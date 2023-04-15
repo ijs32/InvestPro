@@ -11,3 +11,4 @@ data/
 /torch/saved_models
 /torch/saved_vocab
 /torch/runs
+/torch/.vector_cache
