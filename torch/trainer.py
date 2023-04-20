@@ -125,24 +125,23 @@ class Trainer(object):
             # Train the model
             loss = self._mini_batch(validation=False)
             self.losses.append(loss)
-
-            with torch.no_grad():
-                # Performs evaluation using mini-batches
-                val_loss = self._mini_batch(validation=True)
-                self.val_losses.append(val_loss)
+            # make sure we are using a validation set, else skip.
+            if self.val_loader:
+                with torch.no_grad():
+                    val_loss = self._mini_batch(validation=True)
+                    self.val_losses.append(val_loss)
             
             self.completed_epochs += 1
             if loss < best_loss:
                 best_loss = loss
                 model_path = f'./saved_models/model_{epoch}.pt'
-                torch.save(self.model.state_dict(), model_path)
+                self.save_checkpoint(model_path)
 
-        # If a SummaryWriter has been set...
         if self.writer:
             scalars = {'training': loss}
             if val_loss is not None:
                 scalars.update({'validation': val_loss})
-            # Records both losses for each epoch under tag "loss"
+
             self.writer.add_scalars(main_tag='loss',
                                     tag_scalar_dict=scalars,
                                     global_step=epoch)
@@ -151,6 +150,38 @@ class Trainer(object):
             # Flushes the writer
             self.writer.flush()
     
+    def save_checkpoint(self, filename):
+        # Builds dictionary with all elements for resuming training
+        checkpoint = {
+            'epoch': self.total_epochs,
+            'model_state_dict': self.model.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'loss_fn': self.loss_fn(),
+            'loss': self.losses,
+            'val_loss': self.val_losses
+        }
+        torch.save(checkpoint, filename)
+
+    def load_checkpoint(self, filename, continue_train=True):
+        # Loads dictionary
+        checkpoint = torch.load(filename)
+
+        # Restore state for model and optimizer
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        self.optimizer.load_state_dict(
+            checkpoint['optimizer_state_dict']
+        )
+        self.loss_fn = checkpoint['loss_fn']
+
+        if continue_train:
+            self.total_epochs = checkpoint['epoch']
+            self.losses = checkpoint['loss']
+            self.val_losses = checkpoint['val_loss']
+
+            self.model.train() # always use TRAIN for resuming training
+        else:
+            self.model.eval()
+            
     def progress_bar(self, origin, current, total, loss, bar_length=60):
         """Show training progress with progress bar and stats."""
         fraction = current / total
