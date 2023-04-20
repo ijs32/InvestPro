@@ -9,7 +9,8 @@ class NLPModel(nn.Module):
     def __init__(self, embeddings):
 
         super().__init__()
-        self.text_embedding = nn.Embedding.from_pretrained(freeze=True, embeddings=embeddings)
+        self.text_embedding = nn.Embedding.from_pretrained(
+            freeze=True, embeddings=embeddings)
         self.batch_norm = nn.BatchNorm1d(100)
         self.conv_stack = nn.Sequential(
             nn.Conv1d(100, 128, 7),
@@ -33,7 +34,7 @@ class NLPModel(nn.Module):
             nn.ReLU(),
             nn.MaxPool1d(3),
             nn.Dropout(0.10),
-            
+
             nn.Conv1d(32, 32, 7),
             nn.ReLU(),
             nn.AdaptiveMaxPool1d(1),
