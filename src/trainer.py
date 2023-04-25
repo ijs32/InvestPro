@@ -7,7 +7,7 @@ class Trainer(object):
         self.loss_fn = loss_fn
         self.optimizer = optimizer
 
-        self.device = 'mps' if torch.backends.mps.is_available() else 'cpu'
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.model = model
         self.model.to(self.device)
 
@@ -153,7 +153,7 @@ class Trainer(object):
     def save_checkpoint(self, filename):
         # Builds dictionary with all elements for resuming training
         checkpoint = {
-            'epoch': self.total_epochs,
+            'epoch': self.completed_epochs,
             'model_state_dict': self.model.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
             'loss_fn': self.loss_fn(),
@@ -174,7 +174,7 @@ class Trainer(object):
         self.loss_fn = checkpoint['loss_fn']
 
         if continue_train:
-            self.total_epochs = checkpoint['epoch']
+            self.completed_epochs = checkpoint['epoch']
             self.losses = checkpoint['loss']
             self.val_losses = checkpoint['val_loss']
 

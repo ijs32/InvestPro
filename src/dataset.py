@@ -24,7 +24,7 @@ class StatementDataset(Dataset):
     def __getitem__(self, index):
         """Get a single item from the dataset."""
 
-        with gzip.open(f"../data/training-data/company-statements_gz/{self.data[index]}", "rt") as f:
+        with open(f"./data/company-statements/{self.data[index]}", "rt") as f:
             text = f.read()
         label = float(self.data[index].split("__")[0])
 
@@ -38,7 +38,7 @@ class StatementDataset(Dataset):
 
         def yield_tokens(file_names):
             for file_name in file_names:
-                with gzip.open(f"../data/training-data/company-statements_gz/{file_name}", "rt") as f:
+                with open(f"./data/company-statements/{file_name}", "rt") as f:
                     yield toker(f.read())
 
         text_vob = tt.vocab.build_vocab_from_iterator(yield_tokens(

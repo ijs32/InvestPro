@@ -9,13 +9,14 @@ from trainer import Trainer
 def main(n_files=5000):
     """Main function to train the model"""
 
-    with os.scandir("../data/training-data/company-statements_gz") as dir:
+    with os.scandir("./data/company-statements") as dir:
         files = [file.name for file in dir]
         shuffle(files)
-        files = files[:n_files] # last 500 reserved for validation and testing.
+        t_files = files[:n_files] # last 500 reserved for validation and testing.
+        v_files = files[n_files:]
 
-    statement_train_dataset = StatementDataset(files, pre_trained=True)
-
+    statement_train_dataset = StatementDataset(t_files, pre_trained=True)
+    statement_valid_dataset = StatementDataset(v_files, pre_trained=True)
     torch.save(statement_train_dataset.text_vob,
                f'./saved_vocab/text_vob.pt')
     
@@ -30,10 +31,11 @@ def main(n_files=5000):
     loss_fn = nn.L1Loss()
 
     train_loader = statement_train_dataset.get_dataloader()
+    valid_loader = statement_valid_dataset.get_dataloader()
 
     # Train the model.
     model_trainer = Trainer(model, loss_fn, optimizer)
-    model_trainer.set_loaders(train_loader)
+    model_trainer.set_loaders(train_loader, valid_loader)
     model_trainer.set_tensorboard(f"pytorch_{timestamp}")
     model_trainer.train(epochs, seed)
 

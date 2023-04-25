@@ -1,14 +1,14 @@
 # sorry, the data is too big to upload to github
-data/
+/src/data/
+/src/.vector_cache/
+
+# saved models and runs
+/src/runs/
+/src/saved_models/
+/src/saved_vocab/
 
 # giant DB backup file
 /MySQLConn/sql/backup.sql
 
 # keep db variables
 .env
-
-# model vocab and structure
-/torch/saved_models
-/torch/saved_vocab
-/torch/runs
-/torch/.vector_cache
