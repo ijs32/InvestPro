@@ -29,8 +29,8 @@ def main(n_files=5000):
     optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=0.002)
     loss_fn = MeanSqrtError()
 
-    train_loader = statement_train_dataset.get_dataloader()
-    valid_loader = statement_valid_dataset.get_dataloader()
+    train_loader = statement_train_dataset.get_dataloader(batch_size=4)
+    valid_loader = statement_valid_dataset.get_dataloader(batch_size=4)
 
     # Train the model.
     model_trainer = Trainer(model, loss_fn, optimizer)
@@ -40,6 +40,6 @@ def main(n_files=5000):
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
-        sys.exit("Wrong number of arguments given. Usage: `python run.py number_of_files`")
+        sys.exit("Wrong number of arguments given. Usage: `python execute.py number_of_files`")
     n_files = int(sys.argv[1])
     main(n_files)

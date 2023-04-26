@@ -74,7 +74,7 @@ class StatementDataset(Dataset):
 
         return padded_text, labels
 
-    def get_dataloader(self):
+    def get_dataloader(self, batch_size):
         """Get a dataloader for the dataset."""
         return DataLoader(
-            self, batch_size=4, shuffle=True, collate_fn=self.collate_fn)
+            self, batch_size=batch_size, shuffle=True, collate_fn=self.collate_fn)

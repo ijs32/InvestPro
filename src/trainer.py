@@ -60,11 +60,10 @@ class Trainer(object):
 
             if show_stats:
                 print("\n")
-                print("\n")
+                print("==================")
                 print(f"Pred: {yhat[0].item():.2f}")
                 print(f"Correct: {y[0].item():.2f}")
                 print("==================")
-                print("\n")
 
             return loss.item()
 
@@ -75,17 +74,16 @@ class Trainer(object):
         def perform_val_step_fn(x, y, show_stats):
             # Sets model to EVAL mode
             self.model.eval()
-            with torch.no_grad:
-                yhat = self.model(x)
-                loss = self.loss_fn(yhat, y)
+            
+            yhat = self.model(x)
+            loss = self.loss_fn(yhat, y)
 
             if show_stats:
                 print("\n")
-                print("\n")
+                print("==================")
                 print(f"Pred: {yhat[0].item():.2f}")
                 print(f"Correct: {y[0].item():.2f}")
                 print("==================")
-                print("\n")
 
             return loss.item()
 
@@ -118,7 +116,7 @@ class Trainer(object):
             targets = (torch.tensor(targets, dtype=torch.float).to(self.device)).unsqueeze(1)
 
             show_stats = False
-            if i >= len(data_loader)-5:
+            if i >= len(data_loader)-5 or i <= 5:
                 show_stats=True
             mini_batch_loss = step_fn(text, targets, show_stats)
             mini_batch_losses.append(mini_batch_loss)
