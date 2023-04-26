@@ -1,7 +1,6 @@
 import torch, datetime, numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
-
 class Trainer(object):
     def __init__(self, model, loss_fn, optimizer):
         self.loss_fn = loss_fn
@@ -47,30 +46,46 @@ class Trainer(object):
     
     def _make_train_step_fn(self):
         """Perform a training step"""
-        def perform_train_step_fn(x, y):
-          # Sets model to TRAIN mode
-          self.model.train()
+        def perform_train_step_fn(x, y, show_stats):
+            # Sets model to TRAIN mode
+            self.model.train()
 
-          yhat = self.model(x)
-          loss = self.loss_fn(yhat, y)
+            yhat = self.model(x)
 
-          loss.backward()
+            loss = self.loss_fn(yhat, y)
+            loss.backward()
 
-          self.optimizer.step()
-          self.optimizer.zero_grad()
+            self.optimizer.step()
+            self.optimizer.zero_grad()
 
-          return loss.item()
+            if show_stats:
+                print("\n")
+                print("\n")
+                print(f"Pred: {yhat[0].item():.2f}")
+                print(f"Correct: {y[0].item():.2f}")
+                print("==================")
+                print("\n")
+
+            return loss.item()
 
         return perform_train_step_fn
     
     def _make_val_step_fn(self):
         """Returns function `perform_val_step_fn`"""
-        def perform_val_step_fn(x, y):
+        def perform_val_step_fn(x, y, show_stats):
             # Sets model to EVAL mode
             self.model.eval()
+            with torch.no_grad:
+                yhat = self.model(x)
+                loss = self.loss_fn(yhat, y)
 
-            yhat = self.model(x)
-            loss = self.loss_fn(yhat, y)
+            if show_stats:
+                print("\n")
+                print("\n")
+                print(f"Pred: {yhat[0].item():.2f}")
+                print(f"Correct: {y[0].item():.2f}")
+                print("==================")
+                print("\n")
 
             return loss.item()
 
@@ -88,6 +103,7 @@ class Trainer(object):
             data_loader = self.val_loader
             step_fn = self.val_step_fn
             origin = "validation"
+            
         else:
             data_loader = self.train_loader
             step_fn = self.train_step_fn
@@ -101,7 +117,10 @@ class Trainer(object):
             text = text.to(self.device).long()
             targets = (torch.tensor(targets, dtype=torch.float).to(self.device)).unsqueeze(1)
 
-            mini_batch_loss = step_fn(text, targets)
+            show_stats = False
+            if i >= len(data_loader)-5:
+                show_stats=True
+            mini_batch_loss = step_fn(text, targets, show_stats)
             mini_batch_losses.append(mini_batch_loss)
 
             if i % 10 == 0 or i == len(data_loader)-1:
@@ -127,15 +146,14 @@ class Trainer(object):
             self.losses.append(loss)
             # make sure we are using a validation set, else skip.
             if self.val_loader:
-                with torch.no_grad():
-                    val_loss = self._mini_batch(validation=True)
-                    self.val_losses.append(val_loss)
+                val_loss = self._mini_batch(validation=True)
+                self.val_losses.append(val_loss)
             
             self.completed_epochs += 1
             if loss < best_loss:
                 best_loss = loss
                 model_path = f'./saved_models/model_{epoch}.pt'
-                self.save_checkpoint(model_path)
+                # self.save_checkpoint(model_path)
 
         if self.writer:
             scalars = {'training': loss}

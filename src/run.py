@@ -4,6 +4,7 @@ from dataset import StatementDataset
 from random import shuffle
 from datetime import datetime
 from trainer import Trainer
+from loss import MeanSqrtError
 
 
 def main(n_files=5000):
@@ -12,13 +13,11 @@ def main(n_files=5000):
     with os.scandir("./data/company-statements") as dir:
         files = [file.name for file in dir]
         shuffle(files)
-        t_files = files[:n_files] # last 500 reserved for validation and testing.
-        v_files = files[n_files:]
+        t_files = files[:n_files] 
+        v_files = files[100:] # last n reserved for validation and testing.
 
     statement_train_dataset = StatementDataset(t_files, pre_trained=True)
     statement_valid_dataset = StatementDataset(v_files, pre_trained=True)
-    torch.save(statement_train_dataset.text_vob,
-               f'./saved_vocab/text_vob.pt')
     
     timestamp = datetime.now().strftime('%Y%m%d')
     epochs = 35
@@ -28,7 +27,7 @@ def main(n_files=5000):
     print(model)
 
     optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=0.002)
-    loss_fn = nn.L1Loss()
+    loss_fn = MeanSqrtError()
 
     train_loader = statement_train_dataset.get_dataloader()
     valid_loader = statement_valid_dataset.get_dataloader()

@@ -14,7 +14,7 @@ class StatementDataset(Dataset):
         if text_vob is not None:
             self.text_vob = text_vob
         if pre_trained:
-            self.text_vob = vocab.GloVe(name='6B', dim=100)
+            self.text_vob = vocab.GloVe(name='42B', dim=300)
         else:
             self.get_vocab()
 
